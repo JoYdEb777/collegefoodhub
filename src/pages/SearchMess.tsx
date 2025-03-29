@@ -126,7 +126,7 @@ const locations = [
 
 const SearchMess = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState("all");
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [showFilters, setShowFilters] = useState(false);
   const [filteredMesses, setFilteredMesses] = useState<MessDetails[]>(dummyMesses);
@@ -142,7 +142,7 @@ const SearchMess = () => {
     wifi: false,
     food: false
   });
-  const [foodType, setFoodType] = useState("");
+  const [foodType, setFoodType] = useState("any");
   
   // Apply filters
   useEffect(() => {
@@ -157,7 +157,7 @@ const SearchMess = () => {
     }
     
     // Apply location
-    if (location) {
+    if (location && location !== "all") {
       filtered = filtered.filter(mess => 
         mess.address.toLowerCase().includes(location.toLowerCase())
       );
@@ -189,7 +189,7 @@ const SearchMess = () => {
     }
     
     // Apply food type
-    if (foodType && amenities.food) {
+    if (foodType && foodType !== "any" && amenities.food) {
       filtered = filtered.filter(mess => 
         mess.amenities.food && mess.amenities.foodType === foodType
       );
@@ -200,7 +200,7 @@ const SearchMess = () => {
   
   const resetFilters = () => {
     setSearchTerm("");
-    setLocation("");
+    setLocation("all");
     setPriceRange([0, 15000]);
     setRoomTypes({
       single: false,
@@ -211,7 +211,7 @@ const SearchMess = () => {
       wifi: false,
       food: false
     });
-    setFoodType("");
+    setFoodType("any");
   };
   
   const toggleFilter = () => {
@@ -240,7 +240,7 @@ const SearchMess = () => {
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All Locations</SelectItem>
+              <SelectItem value="all">All Locations</SelectItem>
               {locations.map((loc) => (
                 <SelectItem key={loc.name} value={loc.name}>{loc.name}</SelectItem>
               ))}
@@ -370,7 +370,7 @@ const SearchMess = () => {
                           <SelectValue placeholder="Food Type" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Any Type</SelectItem>
+                          <SelectItem value="any">Any Type</SelectItem>
                           <SelectItem value="veg">Vegetarian Only</SelectItem>
                           <SelectItem value="non-veg">Non-Vegetarian Only</SelectItem>
                           <SelectItem value="both">Both Available</SelectItem>
@@ -390,8 +390,8 @@ const SearchMess = () => {
         <div>
           <p className="text-gray-600">
             {filteredMesses.length} {filteredMesses.length === 1 ? 'mess' : 'messes'} found
-            {(searchTerm || location || roomTypes.single || roomTypes.double || roomTypes.triple || 
-              amenities.wifi || amenities.food || foodType) && (
+            {(searchTerm || location !== "all" || roomTypes.single || roomTypes.double || roomTypes.triple || 
+              amenities.wifi || amenities.food || foodType !== "any") && (
               <Button
                 variant="ghost"
                 size="sm"
