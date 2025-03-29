@@ -245,11 +245,11 @@ const MessOwnerDashboard = () => {
                   <p className="text-sm text-gray-500 mb-2">
                     Select your mess location on the map
                   </p>
-                  <MapView 
+                  <MapView
                     center={messInfo.location}
                     selectable={true}
-                    onLocationSelect={(lat, lng) => 
-                      setMessInfo(prev => ({ ...prev, location: { lat, lng } }))
+                    onLocationSelect={(lat, lng) =>
+                      setMessInfo((prev) => ({ ...prev, location: { lat, lng } }))
                     }
                   />
                 </div>

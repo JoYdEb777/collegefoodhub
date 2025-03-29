@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +10,7 @@ import MapView from "@/components/MapView";
 import MessCard from "@/components/MessCard";
 import { MessDetails } from "@/types";
 import { Search, SlidersHorizontal, X } from "lucide-react";
+import { subscribeToMesses } from "@/services/messService";
 
 const dummyMesses: MessDetails[] = [
   {
@@ -146,56 +146,33 @@ const SearchMess = () => {
   
   // Apply filters
   useEffect(() => {
-    let filtered = dummyMesses;
-    
-    // Apply search term
-    if (searchTerm) {
-      filtered = filtered.filter(mess => 
-        mess.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        mess.address.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    // Apply location
-    if (location && location !== "all") {
-      filtered = filtered.filter(mess => 
-        mess.address.toLowerCase().includes(location.toLowerCase())
-      );
-    }
-    
-    // Apply price range
-    filtered = filtered.filter(mess => {
-      const cheapestRoom = mess.rooms.reduce((prev, current) => 
-        (prev.rent < current.rent) ? prev : current
-      );
-      return cheapestRoom.rent >= priceRange[0] && cheapestRoom.rent <= priceRange[1];
+    // Subscribe to realtime updates
+    const unsubscribe = subscribeToMesses({
+      location: location !== "all" ? location : undefined,
+      priceRange: priceRange,
+      roomTypes: Object.entries(roomTypes)
+        .filter(([_, checked]) => checked)
+        .map(([type]) => type),
+      amenities: {
+        wifi: amenities.wifi,
+        food: amenities.food
+      },
+      foodType: foodType !== "any" ? foodType : undefined
+    }, (messes) => {
+      // Apply search term filter client-side
+      if (searchTerm) {
+        const filtered = messes.filter(mess =>
+          mess.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          mess.address.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredMesses(filtered);
+      } else {
+        setFilteredMesses(messes);
+      }
     });
-    
-    // Apply room types
-    if (roomTypes.single || roomTypes.double || roomTypes.triple) {
-      filtered = filtered.filter(mess => 
-        (roomTypes.single && mess.rooms.some(room => room.type === "single")) ||
-        (roomTypes.double && mess.rooms.some(room => room.type === "double")) ||
-        (roomTypes.triple && mess.rooms.some(room => room.type === "triple"))
-      );
-    }
-    
-    // Apply amenities
-    if (amenities.wifi) {
-      filtered = filtered.filter(mess => mess.amenities.wifi);
-    }
-    if (amenities.food) {
-      filtered = filtered.filter(mess => mess.amenities.food);
-    }
-    
-    // Apply food type
-    if (foodType && foodType !== "any" && amenities.food) {
-      filtered = filtered.filter(mess => 
-        mess.amenities.food && mess.amenities.foodType === foodType
-      );
-    }
-    
-    setFilteredMesses(filtered);
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, [searchTerm, location, priceRange, roomTypes, amenities, foodType]);
   
   const resetFilters = () => {
@@ -437,13 +414,13 @@ const SearchMess = () => {
       ) : (
         <div className="h-[600px] rounded-lg overflow-hidden border border-gray-200">
           <MapView
-            markers={filteredMesses.map(mess => ({
+            markers={filteredMesses.map((mess) => ({
               id: mess.id,
               lat: mess.location.lat,
               lng: mess.location.lng,
               title: mess.name
             }))}
-            onMarkerClick={(id) => { console.log(`Clicked on mess ${id}`); }}
+            onMarkerClick={(id) => navigate(`/mess/${id}`)}
             height="600px"
           />
         </div>

@@ -1,7 +1,6 @@
-
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
+import { useEffect, useRef } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
 interface MapViewProps {
   markers?: Array<{
@@ -21,81 +20,67 @@ const MapView = ({
   markers = [],
   onMarkerClick,
   onLocationSelect,
-  center = { lat: 20.5937, lng: 78.9629 }, // Default center of India
+  center = { lat: 20.5937, lng: 78.9629 }, // Default to India's center
   selectable = false,
-  height = "500px"
+  height = "400px"
 }: MapViewProps) => {
   const mapRef = useRef<HTMLDivElement>(null);
-  const [mapApiLoaded, setMapApiLoaded] = useState(false);
-  const [mapApiKey, setMapApiKey] = useState<string>("");
-  const [showKeyInput, setShowKeyInput] = useState(true);
+  const mapInstanceRef = useRef<L.Map | null>(null);
 
   useEffect(() => {
-    // Check if the map has been initialized
-    if (mapApiLoaded && mapRef.current && mapApiKey) {
-      // This is where we would initialize the map with the API key
-      // In a real implementation, this would use the Google Maps API or any other map provider
-      console.log("Map initialized with key:", mapApiKey);
-      
-      // For this demo, we'll just show a mock implementation
-      const mapElement = mapRef.current;
-      mapElement.innerHTML = `
-        <div class="flex items-center justify-center h-full bg-gray-100 rounded-lg">
-          <div class="text-center p-4">
-            <p class="text-lg font-semibold">Interactive Map</p>
-            <p class="text-sm text-gray-500">Using API Key: ${mapApiKey.substring(0, 4)}...${mapApiKey.substring(mapApiKey.length - 4)}</p>
-            <p class="text-sm text-gray-500 mt-2">Markers: ${markers.length}</p>
-            <p class="text-sm text-gray-500">Center: ${center.lat.toFixed(4)}, ${center.lng.toFixed(4)}</p>
-            <p class="text-xs text-gray-400 mt-4">In a real implementation, this would be an interactive map showing the markers</p>
-          </div>
-        </div>
-      `;
-    }
-  }, [mapApiLoaded, markers, center, mapApiKey]);
+    if (!mapRef.current) return;
 
-  const handleApiKeySubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const key = formData.get("mapApiKey") as string;
-    
-    if (key && key.length > 10) {
-      setMapApiKey(key);
-      setMapApiLoaded(true);
-      setShowKeyInput(false);
-      toast.success("Map API key added successfully");
-    } else {
-      toast.error("Please enter a valid API key");
+    // Initialize the map
+    const map = L.map(mapRef.current).setView([center.lat, center.lng], 12);
+    mapInstanceRef.current = map;
+
+    // Add OpenStreetMap tiles
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // Handle map clicks for location selection
+    if (selectable) {
+      map.on("click", (e: L.LeafletMouseEvent) => {
+        const { lat, lng } = e.latlng;
+        if (onLocationSelect) {
+          onLocationSelect(lat, lng);
+        }
+      });
     }
-  };
+
+    return () => {
+      map.remove();
+    };
+  }, [center, selectable, onLocationSelect]);
+
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+
+    // Clear existing markers
+    mapInstanceRef.current.eachLayer((layer) => {
+      if (layer instanceof L.Marker) {
+        mapInstanceRef.current?.removeLayer(layer);
+      }
+    });
+
+    // Add new markers
+    markers.forEach(({ id, lat, lng, title }) => {
+      const marker = L.marker([lat, lng]).addTo(mapInstanceRef.current!);
+      marker.bindPopup(`<b>${title}</b>`);
+
+      if (onMarkerClick) {
+        marker.on("click", () => onMarkerClick(id));
+      }
+    });
+  }, [markers, onMarkerClick]);
 
   return (
-    <div className="space-y-4">
-      {showKeyInput && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <form onSubmit={handleApiKeySubmit} className="space-y-4">
-            
-          </form>
-        </div>
-      )}
-      
-      <div 
-        ref={mapRef} 
-        className="rounded-lg overflow-hidden border border-gray-200" 
-        style={{ height, width: "100%" }}
-      >
-        {!mapApiLoaded && !showKeyInput && (
-          <div className="flex items-center justify-center h-full bg-gray-100">
-            <p className="text-gray-500">Loading map...</p>
-          </div>
-        )}
-      </div>
-      
-      {selectable && mapApiLoaded && (
-        <div className="text-sm text-gray-500">
-          Click on the map to select a location for your mess
-        </div>
-      )}
-    </div>
+    <div
+      ref={mapRef}
+      style={{ height, width: "100%" }}
+      className="rounded-lg overflow-hidden border border-gray-200"
+    />
   );
 };
 
