@@ -1,6 +1,7 @@
-
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 import MessCard from "@/components/MessCard";
 import { MessDetails } from "@/types";
 
@@ -69,39 +70,87 @@ const dummyMesses: MessDetails[] = [
 ];
 
 const Home = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+
+  const handleSearch = () => {
+    try {
+      if (searchQuery.trim()) {
+        navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+      }
+    } catch (error) {
+      console.error("Navigation error:", error);
+    }
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       {/* Hero Section */}
-      <section className="hero-gradient text-white py-16 md:py-24">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center">
-          <div className="md:w-1/2 text-center md:text-left mb-10 md:mb-0">
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-4">
-              Find Your Perfect College Mess
+      <section className="hero-section text-white py-20 relative overflow-hidden">
+        {/* Background Overlay */}
+        <div className="hero-overlay"></div>
+
+        {/* Decorative Elements */}
+        <div className="absolute top-0 right-0 w-32 h-32 md:w-64 md:h-64 opacity-20">
+          <svg viewBox="0 0 100 100" fill="white">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+            <circle cx="50" cy="50" r="30" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+            <circle cx="50" cy="50" r="20" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+          </svg>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-4xl mx-auto text-center">
+            <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight drop-shadow-lg">
+              Find Your Perfect College Mess Experience
             </h1>
-            <p className="text-lg md:text-xl mb-8 opacity-90">
-              Connect with mess owners, explore housing options with meal plans, and find your ideal accommodation during your college years.
+            <p className="text-xl md:text-2xl mb-8 text-gray-100 drop-shadow-md">
+              Discover affordable accommodation with quality meals near your college
             </p>
-            <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4 justify-center md:justify-start">
-              <Link to="/search">
-                <Button size="lg" className="w-full sm:w-auto bg-white text-messsathi-orange hover:bg-gray-100">
-                  Find a Mess
+            
+            {/* Search Bar with error handling */}
+            <div className="max-w-2xl mx-auto mb-8 relative">
+              <div className="flex gap-4 flex-col sm:flex-row backdrop-blur-sm bg-black/20 p-4 rounded-lg">
+                <Input
+                  type="text"
+                  placeholder="Search by location, college name..."
+                  className="h-12 bg-white/90 text-black placeholder:text-gray-500"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                />
+                <Button 
+                  size="lg" 
+                  className="bg-orange-500 hover:bg-orange-600 text-white h-12 px-8"
+                  onClick={handleSearch}
+                >
+                  Search
                 </Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  List Your Mess
-                </Button>
-              </Link>
+              </div>
+            </div>
+
+            {/* Stats with updated styling */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-12">
+              <div className="backdrop-blur-md bg-black/30 rounded-lg p-4 border border-white/10">
+                <div className="font-bold text-3xl">500+</div>
+                <div className="text-sm text-gray-200">Listed Messes</div>
+              </div>
+              <div className="backdrop-blur-md bg-black/30 rounded-lg p-4 border border-white/10">
+                <div className="font-bold text-3xl">1000+</div>
+                <div className="text-sm text-gray-200">Happy Students</div>
+              </div>
+              <div className="hidden md:block backdrop-blur-md bg-black/30 rounded-lg p-4 border border-white/10">
+                <div className="font-bold text-3xl">50+</div>
+                <div className="text-sm text-gray-200">Colleges Covered</div>
+              </div>
             </div>
           </div>
-          <div className="md:w-1/2">
-            <img 
-              src="https://placehold.co/600x400/white/white?text=Mess+Image" 
-              alt="College Mess" 
-              className="rounded-lg shadow-xl"
-            />
-          </div>
         </div>
+
+        {/* Bottom Wave Pattern */}
+        <svg className="hero-pattern" viewBox="0 0 1440 40" preserveAspectRatio="none">
+          <path d="M0,0 C480,40 960,40 1440,0 L1440,40 L0,40 Z" fill="currentColor"/>
+        </svg>
       </section>
 
       {/* How It Works */}
