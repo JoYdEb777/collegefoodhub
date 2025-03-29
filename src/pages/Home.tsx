@@ -88,7 +88,7 @@ const Home = () => {
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
+                <Button size="lg" className="w-full sm:w-auto bg-messsathi-blue text-white hover:bg-messsathi-blue/90">
                   List Your Mess
                 </Button>
               </Link>
@@ -96,9 +96,9 @@ const Home = () => {
           </div>
           <div className="md:w-1/2">
             <img 
-              src="https://placehold.co/600x400/white/white?text=Mess+Image" 
+              src="/lovable-uploads/91514f2f-f590-45d5-812f-a723c154f68a.png"
               alt="College Mess" 
-              className="rounded-lg shadow-xl"
+              className="rounded-lg shadow-xl object-cover w-full h-full"
             />
           </div>
         </div>
