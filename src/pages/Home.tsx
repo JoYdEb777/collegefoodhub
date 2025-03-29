@@ -129,7 +129,21 @@ const Home = () => {
               </div>
             </div>
 
-            {/* Stats with updated styling */}
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/search">
+                <Button size="lg" className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white">
+                  Browse Messes
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
+                  List Your Mess
+                </Button>
+              </Link>
+            </div>
+
+            {/* Stats */}
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-12">
               <div className="backdrop-blur-md bg-black/30 rounded-lg p-4 border border-white/10">
                 <div className="font-bold text-3xl">500+</div>
