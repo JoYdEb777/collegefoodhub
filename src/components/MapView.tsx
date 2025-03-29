@@ -73,25 +73,7 @@ const MapView = ({
       {showKeyInput && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <form onSubmit={handleApiKeySubmit} className="space-y-4">
-            <div>
-              <label htmlFor="mapApiKey" className="block text-sm font-medium text-yellow-800">
-                Enter Map API Key
-              </label>
-              <p className="text-xs text-yellow-600 mb-2">
-                For demonstration purposes. In a production app, this would be securely handled on the server.
-              </p>
-              <input
-                type="text"
-                id="mapApiKey"
-                name="mapApiKey"
-                className="mt-1 block w-full px-3 py-2 border border-yellow-300 rounded-md shadow-sm focus:outline-none focus:ring-yellow-500 focus:border-yellow-500 sm:text-sm"
-                placeholder="Enter your map API key"
-                required
-              />
-            </div>
-            <Button type="submit" className="bg-yellow-600 hover:bg-yellow-700">
-              Submit API Key
-            </Button>
+            
           </form>
         </div>
       )}

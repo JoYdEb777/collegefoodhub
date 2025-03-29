@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,8 +11,13 @@ import FileUpload from "@/components/FileUpload";
 import MapView from "@/components/MapView";
 import { toast } from "sonner";
 import { MessDetails } from "@/types";
+import { db, storage } from '@/config/firebase';
+import { useAuth } from '@/contexts/AuthContext';
+import { collection, addDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const MessOwnerDashboard = () => {
+  const { user, userData } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [messPhotos, setMessPhotos] = useState<File[]>([]);
   const [singleRoomPhotos, setSingleRoomPhotos] = useState<File[]>([]);
@@ -84,7 +88,7 @@ const MessOwnerDashboard = () => {
     }));
   };
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     // Validation
@@ -98,8 +102,42 @@ const MessOwnerDashboard = () => {
       return;
     }
     
-    // Save mess information (in a real app, this would be an API call)
-    toast.success("Mess information saved successfully");
+    try {
+      // Upload mess photos
+      const photoUrls = await Promise.all(
+        messPhotos.map(async (file) => {
+          const fileRef = ref(storage, `mess_photos/${user?.uid}/${file.name}`);
+          await uploadBytes(fileRef, file);
+          return getDownloadURL(fileRef);
+        })
+      );
+
+      // Create mess document
+      const messData = {
+        ownerId: user?.uid,
+        ownerName: userData?.name,
+        name: messInfo.name,
+        description: messInfo.description,
+        address: messInfo.address,
+        location: messInfo.location,
+        photos: photoUrls,
+        rooms: [],
+        amenities: {
+          wifi: messInfo.hasWifi,
+          food: messInfo.providesFood,
+          foodType: messInfo.foodType,
+          mealsPerDay: messInfo.mealsPerDay,
+          weeklyMenu: messInfo.weeklyMenu
+        },
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const messRef = await addDoc(collection(db, 'messes'), messData);
+      toast.success("Mess information saved successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to save mess information");
+    }
   };
 
   return (

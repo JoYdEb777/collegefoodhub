@@ -1,12 +1,12 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isLoggedIn = false; // Replace with actual auth state later
+  const { user, userData } = useAuth();
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -30,8 +30,8 @@ const Navbar = () => {
             <Link to="/about" className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-messsathi-orange">
               About
             </Link>
-            {isLoggedIn ? (
-              <Link to="/dashboard">
+            {user ? (
+              <Link to={userData?.role === 'owner' ? '/mess-owner-dashboard' : '/tenant-dashboard'}>
                 <Button>Dashboard</Button>
               </Link>
             ) : (
@@ -83,9 +83,9 @@ const Navbar = () => {
             >
               About
             </Link>
-            {isLoggedIn ? (
+            {user ? (
               <Link 
-                to="/dashboard" 
+                to={userData?.role === 'owner' ? '/mess-owner-dashboard' : '/tenant-dashboard'} 
                 className="block px-3 py-2 rounded-md text-base font-medium bg-messsathi-orange text-white"
                 onClick={() => setIsMenuOpen(false)}
               >
