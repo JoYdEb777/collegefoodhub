@@ -1,36 +1,4 @@
 {
-  "indexes": [
-    {
-      "collectionGroup": "messes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "address", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "amenities.wifi", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "amenities.food", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "messes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "amenities.foodType", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    }
-  ]
+  "indexes": [],
+  "fieldOverrides": []
 }

@@ -8,10 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MapView from "@/components/MapView";
 import MessCard from "@/components/MessCard";
-import { MessDetails, College } from "@/types";
+import { MessDetails } from "@/types";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { subscribeToMesses } from "@/services/messService";
 import { searchLocation, calculateDistance } from "@/services/locationService";
+import type { College } from "@/services/locationService";
+import { useNavigate } from "react-router-dom";
 
 const dummyMesses: MessDetails[] = [
   {
@@ -114,6 +116,69 @@ const dummyMesses: MessDetails[] = [
       mealsPerDay: 3
     },
     ratings: 4.3
+  },
+  {
+    id: "kgec-1",
+    name: "Kalyani Student Mess",
+    ownerId: "owner-kgec-1",
+    description: "Premium mess service near KGEC campus with homestyle Bengali cuisine and modern amenities.",
+    address: "Near Kalyani Government Engineering College, Kalyani, West Bengal 741235",
+    location: { lat: 22.9747, lng: 88.4337 },
+    photos: [
+      "https://placehold.co/600x400/orange/white?text=Dining+Area",
+      "https://placehold.co/600x400/green/white?text=Room+View",
+      "https://placehold.co/600x400/blue/white?text=Building"
+    ],
+    rooms: [
+      { type: "double", count: 15, rent: 4500, photos: [] },
+      { type: "triple", count: 10, rent: 3500, photos: [] }
+    ],
+    amenities: {
+      wifi: true,
+      food: true,
+      foodType: "both",
+      mealsPerDay: 3,
+      weeklyMenu: [
+        {
+          day: "Monday",
+          breakfast: "Luchi, Aloor Dom, Tea",
+          lunch: "Rice, Dal, Fish Curry, Mixed Veg",
+          dinner: "Roti, Chicken Curry, Salad"
+        }
+      ]
+    },
+    ratings: 4.6
+  },
+  {
+    id: "kgec-2",
+    name: "KGEC Green View Mess",
+    ownerId: "owner-kgec-2",
+    description: "Budget-friendly mess with clean rooms and traditional Bengali food, walking distance from KGEC.",
+    address: "B-Block, Kalyani Township, Near KGEC, Kalyani, West Bengal 741235",
+    location: { lat: 22.9745, lng: 88.4340 },
+    photos: [
+      "https://placehold.co/600x400/teal/white?text=Mess+Front",
+      "https://placehold.co/600x400/purple/white?text=Room+Interior"
+    ],
+    rooms: [
+      { type: "single", count: 8, rent: 5500, photos: [] },
+      { type: "double", count: 12, rent: 4000, photos: [] }
+    ],
+    amenities: {
+      wifi: true,
+      food: true,
+      foodType: "veg",
+      mealsPerDay: 3,
+      weeklyMenu: [
+        {
+          day: "Monday",
+          breakfast: "Paratha, Sabzi, Tea",
+          lunch: "Rice, Dal, Paneer, Veg Curry",
+          dinner: "Roti, Mixed Veg, Salad"
+        }
+      ]
+    },
+    ratings: 4.3
   }
 ];
 
@@ -137,6 +202,8 @@ const SearchMess = () => {
   const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
   const [nearbyMesses, setNearbyMesses] = useState<MessDetails[]>([]);
   const [collegesOnMap, setCollegesOnMap] = useState<College[]>([]);
+
+  const navigate = useNavigate();
 
   // Filter states
   const [priceRange, setPriceRange] = useState([0, 15000]);
@@ -187,6 +254,10 @@ const SearchMess = () => {
 
     const sorted = messesWithDistance.sort((a, b) => a.distance - b.distance);
     setNearbyMesses(sorted);
+  };
+
+  const handleMessClick = (messId: string) => {
+    navigate(`/mess/${messId}`);
   };
 
   useEffect(() => {
@@ -503,6 +574,7 @@ const SearchMess = () => {
               { lat: selectedCollege.lat, lng: selectedCollege.lng } : 
               undefined}
             height="600px"
+            onMarkerClick={handleMessClick}
           />
         </div>
       )}

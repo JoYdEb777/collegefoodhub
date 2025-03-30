@@ -1,7 +1,6 @@
 {
   "projects": {
-    "staging": "httpbit",
-    "default": "httpbit"
+    "default": "messsathi-c1281"
   },
   "targets": {},
   "etags": {}

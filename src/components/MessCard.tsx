@@ -18,7 +18,7 @@ const MessCard = ({ mess, distance, showDistance }: MessCardProps) => {
   );
 
   return (
-    <Link to={`/mess/${mess.id}`}>
+    <Link to={`/mess/${mess.id}`} className="block">
       <div className="group bg-white rounded-lg overflow-hidden shadow mess-card-shadow transition-all duration-300 hover:shadow-lg">
         <div className="aspect-w-16 aspect-h-9 relative">
           <img

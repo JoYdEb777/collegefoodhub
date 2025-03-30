@@ -10,9 +10,10 @@ interface MessOwnerSignupProps {
   formData: any;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isLoading: boolean;
+  onPhoneVerified: (verified: boolean) => void; // Add this prop
 }
 
-const MessOwnerSignup = ({ formData, handleChange, isLoading }: MessOwnerSignupProps) => {
+const MessOwnerSignup = ({ formData, handleChange, isLoading, onPhoneVerified }: MessOwnerSignupProps) => {
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otp, setOtp] = useState("");
@@ -61,7 +62,7 @@ const MessOwnerSignup = ({ formData, handleChange, isLoading }: MessOwnerSignupP
     }
   };
 
-  const verifyOtp = async () => {
+  const handleOtpVerification = async () => {
     if (!otp) {
       toast.error("Please enter the OTP");
       return;
@@ -75,10 +76,12 @@ const MessOwnerSignup = ({ formData, handleChange, isLoading }: MessOwnerSignupP
       });
 
       if (response.data.success) {
-        toast.success("Phone number verified successfully");
         setOtpVerified(true);
+        onPhoneVerified(true); // Add this line
+        toast.success("Phone number verified successfully");
       }
     } catch (error: any) {
+      onPhoneVerified(false); // Add this line
       toast.error(error.message || "Failed to verify OTP");
     }
   };
@@ -130,7 +133,7 @@ const MessOwnerSignup = ({ formData, handleChange, isLoading }: MessOwnerSignupP
                 onChange={(e) => setOtp(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={verifyOtp}>
+              <Button onClick={handleOtpVerification}>
                 Verify OTP
               </Button>
             </div>

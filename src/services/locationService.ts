@@ -1,9 +1,21 @@
-interface College {
+const GEOCODING_API_URL = 'https://nominatim.openstreetmap.org';
+
+export interface College {
   name: string;
   address: string;
   lat: number;
   lng: number;
   city: string;
+}
+
+export interface LocationSuggestion {
+  id: string;
+  name: string;
+  address: string;
+  location: {
+    lat: number;
+    lng: number;
+  };
 }
 
 interface LocationWithDistance {
@@ -30,7 +42,7 @@ export const calculateDistance = (
 
 export const searchLocation = async (query: string): Promise<College[]> => {
   const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+    `${GEOCODING_API_URL}/search?q=${encodeURIComponent(
       query + ' college india'
     )}&format=json&addressdetails=1&limit=5&countrycodes=in`
   );

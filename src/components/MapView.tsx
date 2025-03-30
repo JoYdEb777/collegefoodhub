@@ -96,11 +96,22 @@ const MapView = ({
     });
   }, [markers, colleges, onMarkerClick]);
 
-  // Update map center when it changes
+  // Update map center and zoom when center prop changes
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
-    mapInstanceRef.current.setView([center.lat, center.lng], 15);
-  }, [center.lat, center.lng]);
+    if (mapInstanceRef.current && center) {
+      mapInstanceRef.current.setView([center.lat, center.lng], 16);
+      
+      // Clear existing markers
+      mapInstanceRef.current.eachLayer((layer) => {
+        if (layer instanceof L.Marker) {
+          mapInstanceRef.current?.removeLayer(layer);
+        }
+      });
+
+      // Add new marker at center
+      L.marker([center.lat, center.lng]).addTo(mapInstanceRef.current);
+    }
+  }, [center]);
 
   return (
     <div

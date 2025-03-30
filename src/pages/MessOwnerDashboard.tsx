@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,19 +11,31 @@ import FileUpload from "@/components/FileUpload";
 import MapView from "@/components/MapView";
 import { toast } from "sonner";
 import { MessDetails } from "@/types";
-import { db, storage } from '@/config/firebase';
+import { db, storage, auth } from '@/config/firebase';
 import { useAuth } from '@/contexts/AuthContext';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, setDoc, doc, getDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { searchLocation, LocationSuggestion } from "@/services/locationService";
+import { debounce } from "lodash";
+import { LogOut, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import OwnerProfileDialog from "@/components/OwnerProfileDialog";
 
 const MessOwnerDashboard = () => {
-  const { user, userData } = useAuth();
+  const { user, userData, setUserData } = useAuth();
   const [activeTab, setActiveTab] = useState("profile");
   const [messPhotos, setMessPhotos] = useState<File[]>([]);
   const [singleRoomPhotos, setSingleRoomPhotos] = useState<File[]>([]);
   const [doubleRoomPhotos, setDoubleRoomPhotos] = useState<File[]>([]);
   const [tripleRoomPhotos, setTripleRoomPhotos] = useState<File[]>([]);
-  
+  const [addressSuggestions, setAddressSuggestions] = useState<LocationSuggestion[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+
   const [messInfo, setMessInfo] = useState({
     name: "",
     description: "",
@@ -60,7 +72,64 @@ const MessOwnerDashboard = () => {
       { day: "Sunday", breakfast: "", lunch: "", dinner: "" },
     ]
   });
-  
+
+  useEffect(() => {
+    // Get user's current location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMessInfo(prev => ({
+            ...prev,
+            location: {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            }
+          }));
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+  }, []);
+
+  // Debounced search function
+  const debouncedSearch = useRef(
+    debounce(async (query: string) => {
+      if (!query) {
+        setAddressSuggestions([]);
+        return;
+      }
+
+      setIsSearching(true);
+      try {
+        const results = await searchLocation(query);
+        setAddressSuggestions(results);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500)
+  ).current;
+
+  // Handle address search
+  const handleAddressSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setMessInfo(prev => ({ ...prev, address: query }));
+    debouncedSearch(query);
+  };
+
+  // Handle suggestion selection
+  const handleSuggestionSelect = (suggestion: LocationSuggestion) => {
+    setMessInfo(prev => ({
+      ...prev,
+      address: suggestion.address,
+      location: suggestion.location
+    }));
+    setAddressSuggestions([]);
+  };
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setMessInfo(prev => ({ ...prev, [name]: value }));
@@ -91,6 +160,11 @@ const MessOwnerDashboard = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!userData) {
+      toast.error("Please login first");
+      return;
+    }
+
     // Validation
     if (!messInfo.name || !messInfo.address) {
       toast.error("Please provide all required information");
@@ -114,36 +188,109 @@ const MessOwnerDashboard = () => {
 
       // Create mess document
       const messData = {
-        ownerId: user?.uid,
-        ownerName: userData?.name,
-        name: messInfo.name,
-        description: messInfo.description,
-        address: messInfo.address,
-        location: messInfo.location,
+        ...messInfo,
+        ownerName: userData.name,
+        ownerPhoto: userData.photoURL,
         photos: photoUrls,
-        rooms: [],
-        amenities: {
-          wifi: messInfo.hasWifi,
-          food: messInfo.providesFood,
-          foodType: messInfo.foodType,
-          mealsPerDay: messInfo.mealsPerDay,
-          weeklyMenu: messInfo.weeklyMenu
-        },
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        createdAt: new Date().toISOString()
       };
 
-      const messRef = await addDoc(collection(db, 'messes'), messData);
+      await setDoc(doc(db, 'messes', user!.uid), messData);
       toast.success("Mess information saved successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to save mess information");
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      toast.success("Logged out successfully");
+      navigate("/login");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to logout");
+    }
+  };
+
+  const handleProfileUpdate = async () => {
+    if (!userData?.uid) return;
+    
+    setIsLoading(true);
+    try {
+      // Get fresh user data from Firestore
+      const userDocRef = doc(db, 'users', userData.uid);
+      const userDocSnap = await getDoc(userDocRef);
+      
+      if (userDocSnap.exists()) {
+        const freshData = userDocSnap.data();
+        await updateUserData(freshData);
+        toast.success("Profile updated successfully");
+        
+        // Update local state to reflect changes
+        setUserData(freshData);
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Mess Owner Dashboard</h1>
-      
+      {/* Profile Header */}
+      <div className="bg-gradient-to-r from-messsathi-orange/10 to-messsathi-blue/10 rounded-lg p-6 mb-8">
+        <div className="flex flex-col md:flex-row items-center justify-between">
+          <div className="flex items-center gap-6 mb-4 md:mb-0">
+            <div className="relative">
+              <img 
+                src={userData?.photoURL || '/default-avatar.png'}
+                alt={userData?.name}
+                className="w-24 h-24 rounded-full border-4 border-white shadow-lg"
+              />
+              {userData?.aadharVerified && (
+                <div className="absolute -bottom-2 right-0 bg-green-500 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center">
+                  <span className="text-white text-xs">✓</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold">{userData?.name}</h1>
+              <p className="text-gray-600">{userData?.email}</p>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="px-3 py-1 bg-messsathi-orange/10 text-messsathi-orange rounded-full text-sm">
+                  Mess Owner
+                </span>
+                {userData?.aadharVerified && (
+                  <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                    Verified
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={() => setIsEditing(true)}
+            >
+              <Settings size={16} />
+              Edit Profile
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="flex items-center gap-2 text-red-600 hover:text-red-700"
+              onClick={handleLogout}
+            >
+              <LogOut size={16} />
+              Logout
+            </Button>
+          </div>
+        </div>
+      </div>
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
         <TabsList className="grid grid-cols-3 md:w-fit w-full">
           <TabsTrigger value="profile">Your Profile</TabsTrigger>
@@ -154,41 +301,45 @@ const MessOwnerDashboard = () => {
         {/* Profile Tab */}
         <TabsContent value="profile" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Personal Information</CardTitle>
-              <CardDescription>
-                View and update your personal information
-              </CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Personal Information</CardTitle>
+                <CardDescription>View and update your personal information</CardDescription>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsEditing(true)}
+                className="shrink-0"
+              >
+                Edit Profile
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="owner-name">Full Name</Label>
-                <Input id="owner-name" value="John Doe" disabled />
+                <Input id="owner-name" value={userData?.name || ""} disabled />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="owner-email">Email</Label>
-                <Input id="owner-email" value="john.doe@example.com" disabled />
+                <Input id="owner-email" value={userData?.email || ""} disabled />
               </div>
               
               <div className="space-y-2">
                 <Label htmlFor="owner-phone">Phone Number</Label>
-                <Input id="owner-phone" value="+91 9876543210" disabled />
+                <Input id="owner-phone" value={userData?.phone || ""} disabled />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="aadhar-status">Aadhar Verification</Label>
-                <div className="px-4 py-2 bg-green-50 text-green-700 rounded-md flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Verified
-                </div>
+                <Label htmlFor="business-name">Business Name</Label>
+                <Input id="business-name" value={userData?.businessName || ""} disabled />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="business-address">Business Address</Label>
+                <Input id="business-address" value={userData?.businessAddress || ""} disabled />
               </div>
             </CardContent>
-            <CardFooter>
-              <Button variant="outline">Update Profile</Button>
-            </CardFooter>
           </Card>
         </TabsContent>
         
@@ -229,29 +380,62 @@ const MessOwnerDashboard = () => {
                 
                 <div className="space-y-2">
                   <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    name="address"
-                    placeholder="Enter complete address"
-                    rows={2}
-                    required
-                    value={messInfo.address}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label>Mess Location on Map</Label>
-                  <p className="text-sm text-gray-500 mb-2">
-                    Select your mess location on the map
-                  </p>
-                  <MapView
-                    center={messInfo.location}
-                    selectable={true}
-                    onLocationSelect={(lat, lng) =>
-                      setMessInfo((prev) => ({ ...prev, location: { lat, lng } }))
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      ref={searchInputRef}
+                      id="address"
+                      name="address"
+                      placeholder="Start typing college name..."
+                      required
+                      value={messInfo.address}
+                      onChange={handleAddressSearch}
+                    />
+                    
+                    {isSearching && (
+                      <div className="absolute right-3 top-3">
+                        <svg className="animate-spin h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      </div>
+                    )}
+
+                    {addressSuggestions.length > 0 && (
+                      <div className="absolute z-10 w-full bg-white mt-1 rounded-md shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+                        {addressSuggestions.map((suggestion) => (
+                          <div
+                            key={suggestion.id}
+                            className="p-3 hover:bg-gray-100 cursor-pointer"
+                            onClick={() => handleSuggestionSelect(suggestion)}
+                          >
+                            <div className="font-medium">{suggestion.name}</div>
+                            <div className="text-sm text-gray-600 truncate">
+                              {suggestion.address}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2 mt-4">
+                    <Label>Location on Map</Label>
+                    <MapView
+                      center={messInfo.location}
+                      selectable={true}
+                      markers={[
+                        {
+                          id: "mess-location",
+                          lat: messInfo.location.lat,
+                          lng: messInfo.location.lng,
+                          title: messInfo.name || "Your Mess Location"
+                        }
+                      ]}
+                      onLocationSelect={(lat, lng) =>
+                        setMessInfo((prev) => ({ ...prev, location: { lat, lng } }))
+                      }
+                    />
+                  </div>
                 </div>
                 
                 <div className="space-y-2">
@@ -557,6 +741,13 @@ const MessOwnerDashboard = () => {
           </form>
         </TabsContent>
       </Tabs>
+
+      <OwnerProfileDialog
+        isOpen={isEditing}
+        onClose={() => setIsEditing(false)}
+        userData={userData}
+        onUpdate={handleProfileUpdate}
+      />
     </div>
   );
 };

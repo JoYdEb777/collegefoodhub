@@ -1,4 +1,3 @@
-
 export type UserRole = 'tenant' | 'owner';
 
 export interface User {
@@ -13,6 +12,18 @@ export interface User {
     name: string;
     phone: string;
     email?: string;
+  };
+  businessName?: string;
+  businessAddress?: string;
+  aadharNumber?: string;
+  panNumber?: string;
+  description?: string;
+  phoneVerified?: boolean;
+  emailVerified?: boolean;
+  documents?: {
+    aadhar?: string;
+    pan?: string;
+    businessLicense?: string;
   };
 }
 

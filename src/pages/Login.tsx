@@ -1,107 +1,167 @@
-
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { signInWithEmailAndPassword, signInWithPopup } from "firebase/auth";
+import { auth, googleProvider, db } from "@/config/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { toast } from "sonner";
 
 const Login = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
-    password: ""
+    password: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Check if user exists and get role
+      const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (!userDoc.exists()) {
+        // If user doesn't exist, redirect to role selection
+        navigate("/signup");
+        return;
+      }
+
+      const userData = userDoc.data();
+      toast.success("Logged in successfully!");
+      navigate(userData.role === "owner" ? "/mess-owner-dashboard" : "/tenant-dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in with Google");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
     
+    if (!formData.email || !formData.password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsLoading(true);
+      const result = await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+      // Get user role from Firestore
+      const userDoc = await getDoc(doc(db, 'users', result.user.uid));
       
-      // For demo, we'll just redirect based on a fake successful login
-      toast.success("Login successful");
-      
-      // Here we'd normally determine if the user is a tenant or owner
-      // For demo, we'll just redirect to a generic dashboard
-      navigate("/dashboard");
-    } catch (error) {
-      toast.error("Login failed. Please check your credentials.");
+      if (!userDoc.exists()) {
+        toast.error("User profile not found");
+        return;
+      }
+
+      const userData = userDoc.data();
+      toast.success("Logged in successfully!");
+      navigate(userData.role === "owner" ? "/mess-owner-dashboard" : "/tenant-dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign in");
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex justify-center items-center min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="flex justify-center items-center min-h-screen bg-gray-50 py-12 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-2">
           <CardTitle className="text-2xl font-bold text-center">Welcome back</CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access your account
+            Sign in to your MessSathi account
           </CardDescription>
         </CardHeader>
-        
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
+
+        <CardContent className="space-y-4">
+          {/* Google Sign In Button */}
+          <Button
+            variant="outline"
+            type="button"
+            className="w-full"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            <FcGoogle className="h-5 w-5 mr-2" />
+            Continue with Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-background px-2 text-muted-foreground">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                name="email"
                 type="email"
                 placeholder="Enter your email"
-                required
                 value={formData.email}
-                onChange={handleChange}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
               />
             </div>
-            
+
             <div className="space-y-2">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between">
                 <Label htmlFor="password">Password</Label>
-                <Link to="/forgot-password" className="text-xs text-messsathi-blue hover:underline">
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-messsathi-blue hover:underline"
+                >
                   Forgot password?
                 </Link>
               </div>
               <Input
                 id="password"
-                name="password"
                 type="password"
                 placeholder="Enter your password"
-                required
                 value={formData.password}
-                onChange={handleChange}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required
               />
             </div>
-          </CardContent>
-          
-          <CardFooter className="flex flex-col space-y-4">
+
             <Button 
               type="submit" 
-              className="w-full bg-messsathi-orange hover:bg-orange-600" 
+              className="w-full bg-messsathi-orange hover:bg-orange-600"
               disabled={isLoading}
             >
-              {isLoading ? "Logging in..." : "Log in"}
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
-            
-            <div className="text-sm text-center">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-messsathi-blue hover:underline">
-                Sign up
-              </Link>
-            </div>
-          </CardFooter>
-        </form>
+          </form>
+        </CardContent>
+
+        <CardFooter>
+          <p className="text-sm text-center w-full">
+            Don't have an account?{" "}
+            <Link to="/signup" className="text-messsathi-blue hover:underline">
+              Sign up
+            </Link>
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );
