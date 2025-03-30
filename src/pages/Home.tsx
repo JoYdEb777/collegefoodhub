@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MessCard from "@/components/MessCard";
 import { MessDetails } from "@/types";
+import { motion } from "framer-motion";
+import { Building2, ArrowRight } from "lucide-react";
 
 const dummyMesses: MessDetails[] = [
   {
@@ -130,16 +132,37 @@ const Home = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
               <Link to="/search">
-                <Button size="lg" className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white">
+                <Button 
+                  size="lg" 
+                  className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8"
+                >
                   Browse Messes
                 </Button>
               </Link>
               <Link to="/signup">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  List Your Mess
-                </Button>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="relative"
+                >
+                  <Button 
+                    size="lg" 
+                    className="w-full sm:w-auto bg-white text-orange-500 hover:bg-orange-50 
+                             hover:text-orange-600 border-2 border-white hover:border-orange-500 
+                             px-8 flex items-center gap-2 relative overflow-hidden group"
+                  >
+                    <Building2 className="w-5 h-5" />
+                    <span>List Your Mess</span>
+                    <ArrowRight className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-orange-500/10 to-transparent 
+                                  opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </Button>
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 bg-orange-500 filter blur-xl opacity-30 
+                                group-hover:opacity-50 transition-opacity -z-10" />
+                </motion.div>
               </Link>
             </div>
 
@@ -219,17 +242,37 @@ const Home = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="bg-messsathi-dark text-white py-16">
+      <section className="bg-gradient-to-br from-messsathi-dark to-messsathi-blue/90 text-white py-20">
         <div className="container mx-auto px-6 text-center">
-          <h2 className="text-3xl font-bold mb-4">Are You a Mess Owner?</h2>
-          <p className="text-lg mb-8 max-w-2xl mx-auto">
-            List your mess on MessSathi and connect with students looking for quality accommodation and food services.
-          </p>
-          <Link to="/signup">
-            <Button size="lg" className="bg-messsathi-orange hover:bg-orange-600">
-              Register Your Mess
-            </Button>
-          </Link>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-4xl font-bold mb-4">Are You a Mess Owner?</h2>
+            <p className="text-xl mb-8 max-w-2xl mx-auto text-gray-200">
+              List your mess on MessSathi and connect with students looking for quality accommodation and food services.
+            </p>
+            <Link to="/signup">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Button 
+                  size="lg" 
+                  className="bg-white text-messsathi-orange hover:bg-orange-50 
+                           border-2 border-white hover:border-orange-500
+                           font-semibold px-8 py-6 text-lg flex items-center gap-3
+                           shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  <Building2 className="w-6 h-6" />
+                  Register Your Mess
+                  <ArrowRight className="w-6 h-6" />
+                </Button>
+              </motion.div>
+            </Link>
+          </motion.div>
         </div>
       </section>
     </div>
