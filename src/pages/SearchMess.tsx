@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import MapView from "@/components/MapView";
 import MessCard from "@/components/MessCard";
-import { MessDetails } from "@/types";
+import { MessDetails, College } from "@/types";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { subscribeToMesses } from "@/services/messService";
+import { searchLocation, calculateDistance } from "@/services/locationService";
 
 const dummyMesses: MessDetails[] = [
   {
@@ -130,7 +131,13 @@ const SearchMess = () => {
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [showFilters, setShowFilters] = useState(false);
   const [filteredMesses, setFilteredMesses] = useState<MessDetails[]>(dummyMesses);
-  
+  const [searchResults, setSearchResults] = useState<College[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<College | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedCollege, setSelectedCollege] = useState<College | null>(null);
+  const [nearbyMesses, setNearbyMesses] = useState<MessDetails[]>([]);
+  const [collegesOnMap, setCollegesOnMap] = useState<College[]>([]);
+
   // Filter states
   const [priceRange, setPriceRange] = useState([0, 15000]);
   const [roomTypes, setRoomTypes] = useState({
@@ -143,10 +150,46 @@ const SearchMess = () => {
     food: false
   });
   const [foodType, setFoodType] = useState("any");
-  
-  // Apply filters
+
+  const handleLocationSearch = async (query: string) => {
+    if (!query.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const results = await searchLocation(query);
+      setSearchResults(results);
+      setCollegesOnMap(results); // Update colleges to display on the map
+    } catch (error) {
+      console.error('Location search failed:', error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleCollegeSelect = async (college: College) => {
+    setSelectedCollege(college);
+    setSearchTerm(college.name);
+    setSearchResults([]);
+    setCollegesOnMap([college]); // Focus on the selected college
+
+    const messesWithDistance = filteredMesses.map(mess => ({
+      ...mess,
+      distance: calculateDistance(
+        college.lat,
+        college.lng,
+        mess.location.lat,
+        mess.location.lng
+      )
+    }));
+
+    const sorted = messesWithDistance.sort((a, b) => a.distance - b.distance);
+    setNearbyMesses(sorted);
+  };
+
   useEffect(() => {
-    // Subscribe to realtime updates
     const unsubscribe = subscribeToMesses({
       location: location !== "all" ? location : undefined,
       priceRange: priceRange,
@@ -159,7 +202,6 @@ const SearchMess = () => {
       },
       foodType: foodType !== "any" ? foodType : undefined
     }, (messes) => {
-      // Apply search term filter client-side
       if (searchTerm) {
         const filtered = messes.filter(mess =>
           mess.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,10 +213,9 @@ const SearchMess = () => {
       }
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [searchTerm, location, priceRange, roomTypes, amenities, foodType]);
-  
+
   const resetFilters = () => {
     setSearchTerm("");
     setLocation("all");
@@ -190,7 +231,7 @@ const SearchMess = () => {
     });
     setFoodType("any");
   };
-  
+
   const toggleFilter = () => {
     setShowFilters(!showFilters);
   };
@@ -199,17 +240,37 @@ const SearchMess = () => {
     <div className="container mx-auto py-8 px-4">
       <h1 className="text-3xl font-bold mb-6">Find Your Perfect Mess</h1>
       
-      {/* Search bar */}
       <div className="mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Search by mess name or address"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+            <div className="relative">
+              <Input
+                placeholder="Search by college name..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  handleLocationSearch(e.target.value);
+                }}
+                className="pl-10"
+              />
+              
+              {searchResults.length > 0 && (
+                <div className="absolute z-10 w-full bg-white mt-1 rounded-md shadow-lg border border-gray-200 max-h-96 overflow-y-auto">
+                  {searchResults.map((college, index) => (
+                    <div
+                      key={index}
+                      className="p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                      onClick={() => handleCollegeSelect(college)}
+                    >
+                      <div className="font-medium text-messsathi-orange">{college.name}</div>
+                      <div className="text-sm text-gray-600">{college.city}</div>
+                      <div className="text-xs text-gray-500 truncate">{college.address}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
           
           <Select value={location} onValueChange={setLocation}>
@@ -248,7 +309,6 @@ const SearchMess = () => {
         </div>
       </div>
       
-      {/* Filters */}
       {showFilters && (
         <Card className="mb-6">
           <CardContent className="p-6">
@@ -260,7 +320,6 @@ const SearchMess = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Price range */}
               <div className="space-y-4">
                 <h4 className="font-medium">Price Range (₹/month)</h4>
                 <div className="px-2">
@@ -278,7 +337,6 @@ const SearchMess = () => {
                 </div>
               </div>
               
-              {/* Room types */}
               <div className="space-y-4">
                 <h4 className="font-medium">Room Types</h4>
                 <div className="space-y-2">
@@ -315,7 +373,6 @@ const SearchMess = () => {
                 </div>
               </div>
               
-              {/* Amenities */}
               <div className="space-y-4">
                 <h4 className="font-medium">Amenities</h4>
                 <div className="space-y-2">
@@ -362,7 +419,24 @@ const SearchMess = () => {
         </Card>
       )}
       
-      {/* Results count */}
+      {selectedCollege && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            Messes near {selectedCollege.name}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {nearbyMesses.map((mess) => (
+              <MessCard
+                key={mess.id}
+                mess={mess}
+                distance={mess.distance}
+                showDistance={true}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex justify-between items-center">
         <div>
           <p className="text-gray-600">
@@ -396,7 +470,6 @@ const SearchMess = () => {
         </div>
       </div>
       
-      {/* Results */}
       {viewMode === "list" ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredMesses.length > 0 ? (
@@ -420,7 +493,15 @@ const SearchMess = () => {
               lng: mess.location.lng,
               title: mess.name
             }))}
-            onMarkerClick={(id) => navigate(`/mess/${id}`)}
+            colleges={collegesOnMap.map((college) => ({
+              id: college.name,
+              lat: college.lat,
+              lng: college.lng,
+              name: college.name
+            }))}
+            center={selectedCollege ? 
+              { lat: selectedCollege.lat, lng: selectedCollege.lng } : 
+              undefined}
             height="600px"
           />
         </div>

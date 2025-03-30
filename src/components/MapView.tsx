@@ -9,6 +9,12 @@ interface MapViewProps {
     lng: number;
     title: string;
   }>;
+  colleges?: Array<{
+    id: string;
+    lat: number;
+    lng: number;
+    name: string;
+  }>;
   onMarkerClick?: (id: string) => void;
   onLocationSelect?: (lat: number, lng: number) => void;
   center?: { lat: number; lng: number };
@@ -18,9 +24,10 @@ interface MapViewProps {
 
 const MapView = ({
   markers = [],
+  colleges = [],
   onMarkerClick,
   onLocationSelect,
-  center = { lat: 20.5937, lng: 78.9629 }, // Default to India's center
+  center = { lat: 20.5937, lng: 78.9629 },
   selectable = false,
   height = "400px"
 }: MapViewProps) => {
@@ -64,7 +71,7 @@ const MapView = ({
       }
     });
 
-    // Add new markers
+    // Add mess markers
     markers.forEach(({ id, lat, lng, title }) => {
       const marker = L.marker([lat, lng]).addTo(mapInstanceRef.current!);
       marker.bindPopup(`<b>${title}</b>`);
@@ -73,7 +80,27 @@ const MapView = ({
         marker.on("click", () => onMarkerClick(id));
       }
     });
-  }, [markers, onMarkerClick]);
+
+    // Add college markers
+    colleges.forEach(({ id, lat, lng, name }) => {
+      const marker = L.marker([lat, lng], {
+        icon: L.divIcon({
+          className: "custom-college-marker",
+          html: `<div class="marker-pin college"></div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 30]
+        })
+      }).addTo(mapInstanceRef.current!);
+
+      marker.bindPopup(`<b>${name}</b>`);
+    });
+  }, [markers, colleges, onMarkerClick]);
+
+  // Update map center when it changes
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    mapInstanceRef.current.setView([center.lat, center.lng], 15);
+  }, [center.lat, center.lng]);
 
   return (
     <div

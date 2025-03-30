@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { MessDetails } from "@/types";
 import { Badge } from "@/components/ui/badge";
@@ -6,9 +5,11 @@ import { Wifi, Utensils } from "lucide-react";
 
 interface MessCardProps {
   mess: MessDetails;
+  distance?: number;
+  showDistance?: boolean;
 }
 
-const MessCard = ({ mess }: MessCardProps) => {
+const MessCard = ({ mess, distance, showDistance }: MessCardProps) => {
   const mainPhoto = mess.photos && mess.photos.length > 0 ? mess.photos[0] : "https://placehold.co/600x400/png?text=No+Image";
   
   // Find the cheapest room
@@ -29,6 +30,14 @@ const MessCard = ({ mess }: MessCardProps) => {
             <div className="absolute top-2 right-2 bg-white/90 px-2 py-1 rounded-full text-sm font-medium flex items-center">
               <span className="text-yellow-500 mr-1">★</span>
               <span>{mess.ratings.toFixed(1)}</span>
+            </div>
+          )}
+          {showDistance && distance && (
+            <div className="absolute top-2 left-2 bg-white/90 px-2 py-1 rounded-full text-sm font-medium">
+              {distance < 1 ? 
+                `${(distance * 1000).toFixed(0)}m` : 
+                `${distance.toFixed(1)}km`
+              } away
             </div>
           )}
         </div>
